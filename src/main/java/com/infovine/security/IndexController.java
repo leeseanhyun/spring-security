@@ -1,6 +1,5 @@
 package com.infovine.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
@@ -11,28 +10,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class IndexController {
 
-  SecurityContextService securityContextService;
-
-  @Autowired
-  public IndexController(SecurityContextService securityContextService) {
-    this.securityContextService = securityContextService;
-  }
-
   @GetMapping("/")
-  public String index(String customParam) {
-    securityContextService.securityContext();
-
-    return "index";
+  public Authentication index(Authentication authentication) {
+    return authentication;
   }
 
-  @GetMapping("loginPage")
-  public String loginPage() {
+  @GetMapping("/loginPage")
+  public String login() {
     return "loginPage";
-  }
-
-  @GetMapping("home")
-  public String home() {
-    return "home";
   }
 
   @GetMapping("/anonymous")
@@ -42,10 +27,11 @@ public class IndexController {
 
   @GetMapping("/authentication")
   public String authentication(Authentication authentication) {
+
     if (authentication instanceof AnonymousAuthenticationToken) {
       return "anonymous";
     } else {
-      return "not anonymous";
+      return "null";
     }
   }
 
@@ -55,7 +41,7 @@ public class IndexController {
   }
 
   @GetMapping("/logoutSuccess")
-  public String logoutSuccess() {
+  public String logoutSuccess(@CurrentSecurityContext SecurityContext context) {
     return "logoutSuccess";
   }
 }
