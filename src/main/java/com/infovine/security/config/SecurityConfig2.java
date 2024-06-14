@@ -1,13 +1,14 @@
 package com.infovine.security.config;
 
-import com.infovine.security.CustomAuthenticationFilter;
 import com.infovine.security.CustomAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AnonymousAuthenticationProvider;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -15,36 +16,35 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.util.List;
 
 @EnableWebSecurity
 @Configuration
 public class SecurityConfig2 {
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManagerBuilder builder, AuthenticationConfiguration configuration)
+      throws Exception {
+
+    // 자식 AuthenticationManagerBuilder 와 ProviderManager
+    AuthenticationManagerBuilder managerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+    managerBuilder.authenticationProvider(customAuthenticationProvider()); //
+
+    // 부모 AuthenticationManagerBuilder 와 ProviderManager
+    ProviderManager providerManager = (ProviderManager) configuration.getAuthenticationManager(); // 부모 parent
+    providerManager.getProviders().remove(0);
+    builder.authenticationProvider(new DaoAuthenticationProvider()); // 부모 빌더에 있는 부모 parent 에 추가한다
+
     http
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/api/login").permitAll()
             .anyRequest().authenticated())
-        .addFilterBefore(customFilter(http), UsernamePasswordAuthenticationFilter.class);
+        .formLogin(Customizer.withDefaults())
+    ;
     return http.build();
   }
 
-  public CustomAuthenticationFilter customFilter(HttpSecurity http) {
-
-    List<AuthenticationProvider> list1 = List.of(new DaoAuthenticationProvider());
-    ProviderManager parent = new ProviderManager(list1);
-    List<AuthenticationProvider> list2 = List.of(new AnonymousAuthenticationProvider("key"), new CustomAuthenticationProvider());
-    ProviderManager authenticationManager = new ProviderManager(list2, parent);
-
-    CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(http);
-    customAuthenticationFilter.setAuthenticationManager(authenticationManager);
-
-    return customAuthenticationFilter;
-
+  @Bean
+  public AuthenticationProvider customAuthenticationProvider() {
+    return new CustomAuthenticationProvider();
   }
 
   @Bean
